@@ -2,7 +2,7 @@ FROM --platform=linux/amd64 php:8.2-apache
 
 COPY index.php /var/www/html/
 
-# Ajout d'en-têtes pour CloudFront
+# Add security headers for CloudFront
 RUN echo 'ServerTokens Prod' >> /etc/apache2/apache2.conf && \
     echo 'ServerSignature Off' >> /etc/apache2/apache2.conf && \
     a2enmod headers && \

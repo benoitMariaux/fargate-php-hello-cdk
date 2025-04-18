@@ -2,6 +2,16 @@
 
 This project deploys a simple PHP application on AWS Fargate with CloudFront, demonstrating high availability across multiple availability zones.
 
+## Architecture Diagram
+
+![Architecture Diagram](architecture_diagram.png)
+
+The diagram above illustrates the high-availability architecture with:
+- CloudFront distribution for content delivery
+- Application Load Balancer distributing traffic
+- Fargate tasks running across multiple availability zones
+- Auto-scaling capabilities based on CPU utilization
+
 > **IMPORTANT NOTE**: This implementation uses a public ALB instead of a private one for simplicity. While CloudFront can connect to private ALBs using VPC Origins, this requires additional configuration including VPC endpoints and potentially SSL certificates if using HTTPS. For demonstration purposes, we've implemented a secured public ALB that only accepts traffic from CloudFront through custom headers, which provides a good balance between security and simplicity.
 
 ## Project Structure
@@ -13,14 +23,9 @@ fargate-php-hello-cdk/
 │   ├── index.php           # PHP application displaying environment information
 │   └── task-definition.json # ECS task definition (for reference)
 ├── app.py                  # CDK code to deploy the infrastructure
+├── architecture_diagram.png # Visual representation of the architecture
 ├── cdk.json                # CDK configuration
 └── README.md               # This file
-```
-
-## Architecture
-
-```
-Internet → CloudFront → Public ALB (secured) → Fargate Containers (PHP) in multiple AZs
 ```
 
 ## Features
