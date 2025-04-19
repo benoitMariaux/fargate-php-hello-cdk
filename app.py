@@ -87,6 +87,31 @@ class FargatePhpHelloStack(Stack):
             scale_out_cooldown=Duration.seconds(60)
         )
         
+        # SECURITY ENHANCEMENT 1: Configure the ALB listener to only accept traffic with the custom header
+        listener = fargate_service.load_balancer.listeners[0]
+        
+        # Add a rule to allow requests with the correct header
+        listener.add_action("CloudFrontOnlyRule",
+            action=elbv2.ListenerAction.forward([fargate_service.target_group]),
+            conditions=[
+                elbv2.ListenerCondition.http_header("X-Origin-Verify", ["private-alb-access"])
+            ],
+            priority=1
+        )
+        
+        # Then, modify the default action to return 403 for requests without the custom header
+        listener_cfn = listener.node.default_child
+        listener_cfn.default_actions = [
+            elbv2.CfnListener.ActionProperty(
+                type="fixed-response",
+                fixed_response_config=elbv2.CfnListener.FixedResponseConfigProperty(
+                    status_code="403",
+                    content_type="text/plain",
+                    message_body="Direct access to ALB not allowed"
+                )
+            )
+        ]
+        
         # Create a CloudFront distribution pointing to the ALB
         distribution = cloudfront.Distribution(self, "PhpHelloDistribution",
             default_behavior=cloudfront.BehaviorOptions(
@@ -107,10 +132,6 @@ class FargatePhpHelloStack(Stack):
             enable_logging=False,  # Disable logging to avoid S3 ACL issues
             http_version=cloudfront.HttpVersion.HTTP2
         )
-        
-        # Secure the ALB to only accept traffic from CloudFront
-        # Get the ALB security group
-        alb_security_group = fargate_service.load_balancer.connections.security_groups[0]
         
         # Add outputs for URLs
         CfnOutput(self, "LoadBalancerDNS",

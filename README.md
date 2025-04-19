@@ -12,8 +12,6 @@ The diagram above illustrates the high-availability architecture with:
 - Fargate tasks running across multiple availability zones
 - Auto-scaling capabilities based on CPU utilization
 
-> **IMPORTANT NOTE**: This implementation uses a public ALB instead of a private one for simplicity. While CloudFront can connect to private ALBs using VPC Origins, this requires additional configuration including VPC endpoints and potentially SSL certificates if using HTTPS. For demonstration purposes, we've implemented a secured public ALB that only accepts traffic from CloudFront through custom headers, which provides a good balance between security and simplicity.
-
 ## Project Structure
 
 ```
@@ -23,6 +21,7 @@ fargate-php-hello-cdk/
 │   ├── index.php           # PHP application displaying environment information
 │   └── task-definition.json # ECS task definition (for reference)
 ├── app.py                  # CDK code to deploy the infrastructure
+├── architecture_diagram.py # Python script to generate the architecture diagram
 ├── architecture_diagram.png # Visual representation of the architecture
 ├── cdk.json                # CDK configuration
 └── README.md               # This file
@@ -37,22 +36,32 @@ fargate-php-hello-cdk/
 - CPU-based auto-scaling
 - **Secured public ALB** that only accepts traffic from CloudFront
 
+## Security Implementation
+
+This architecture implements a secure public ALB that only accepts traffic from CloudFront through a custom header verification mechanism:
+
+1. **Custom Header Verification**: 
+   - CloudFront adds a custom header (`X-Origin-Verify: private-alb-access`) to all requests sent to the ALB
+   - The ALB is configured with a listener rule that checks for this header
+   - If the header is present and has the correct value, the request is forwarded to the Fargate tasks
+   - If the header is missing or incorrect, the ALB returns a 403 Forbidden response
+
+2. **Security Testing**:
+   - Direct access to the ALB without the custom header results in a 403 Forbidden response
+   - Access through CloudFront works correctly as it automatically adds the required header
+   - Even if someone discovers the custom header, they would need to come from a CloudFront IP address
+
+This approach provides a good balance between security and simplicity, without requiring additional services like AWS Global Accelerator or complex VPC configurations.
+
+> **IMPORTANT NOTE**: This implementation uses a public ALB instead of a private one for simplicity. While CloudFront can connect to private ALBs using VPC Origins, this requires additional configuration including VPC endpoints and potentially SSL certificates if using HTTPS. For demonstration purposes, we've implemented a secured public ALB that only accepts traffic from CloudFront through custom headers, which provides a good balance between security and simplicity.
+
 ## Benefits of this Architecture
 
-- **Enhanced Security**: The ALB only accepts traffic from CloudFront
+- **Enhanced Security**: The ALB only accepts traffic from CloudFront through header verification
 - **High Availability**: Distribution of tasks across multiple availability zones
 - **Performance**: CloudFront caches static content and reduces latency
 - **DDoS Protection**: CloudFront includes AWS Shield Standard
 - **Scalability**: Automatic CPU-based auto-scaling
-
-## How it Works
-
-This architecture uses a public but secured ALB that only accepts traffic from CloudFront. Security is ensured by:
-
-1. Custom headers added by CloudFront and verified by the ALB
-2. Security rules that limit access to the ALB
-
-This approach offers a good balance between security and performance, without requiring additional services like AWS Global Accelerator.
 
 ## Accessing the Application
 
